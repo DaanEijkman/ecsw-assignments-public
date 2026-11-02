@@ -20,7 +20,7 @@ Instructions on the setup can be found next to the VM image files.
    # brings Jasmin 2025.06.3, ARM GCC, OpenOCD, Python tools
    nix --extra-experimental-features nix-command --extra-experimental-features flakes develop
    git submodule init && git submodule update # get libopencm3
-   make -C common/libopencm3 TARGETS=stm32/l4 # build libopencm3
+   make -C common/libopencm3 TARGETS="stm32/l4 stm32/f4" # build libopencm3
    cd assignment0-sum # enter any assignment directory
    make # builds firmware for the current assignment
    ```

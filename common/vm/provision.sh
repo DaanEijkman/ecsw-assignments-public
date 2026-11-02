@@ -123,7 +123,7 @@ fi
 echo "Building libopencm3..."
 cd /home/vagrant/cryptoeng/common/libopencm3
 # Source Nix and build inside the development environment
-su - vagrant -c "cd /home/vagrant/cryptoeng && source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix develop --command make -C common/libopencm3 TARGETS=stm32/l4 -j\$(nproc)"
+su - vagrant -c "cd /home/vagrant/cryptoeng && source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix develop --command make -C common/libopencm3 TARGETS=\"stm32/l4 stm32/f4\" -j\$(nproc)"
 
 # Set up udev rules for STM32 devices
 echo "Setting up udev rules for STM32 devices..."

@@ -334,7 +334,7 @@ make
 
 # Check libopencm3
 cd ~/cryptoeng/common/libopencm3
-make TARGETS=stm32/l4
+make TARGETS="stm32/l4 stm32/f4"
 ```
 
 ### libopencm3 compilation fails with "Permission denied" or "cannot execute"
@@ -351,7 +351,7 @@ This usually means you're trying to build from the shared folder (`/vagrant_shar
    ```bash
    cd ~/cryptoeng/common/libopencm3
    make clean
-   make TARGETS=stm32/l4 -j$(nproc)
+   make TARGETS="stm32/l4 stm32/f4" -j$(nproc)
    ```
 
 3. If still failing, re-clone the repository inside the VM:
@@ -360,7 +360,7 @@ This usually means you're trying to build from the shared folder (`/vagrant_shar
    rm -rf cryptoeng
    git clone <your-repo-url> cryptoeng
    cd cryptoeng/common/libopencm3
-   make TARGETS=stm32/l4 -j$(nproc)
+   make TARGETS="stm32/l4 stm32/f4" -j$(nproc)
    ```
 
 ## Additional Resources

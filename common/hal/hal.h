@@ -5,6 +5,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/* Name of the target board, e.g. for startup banners */
+#if defined(STM32L4)
+#define HAL_BOARD_NAME "Nucleo-L4R5ZI"
+#elif defined(STM32F4)
+#define HAL_BOARD_NAME "STM32F4DISCOVERY"
+#elif defined(QEMU_PLATFORM)
+#define HAL_BOARD_NAME "QEMU mps2-an386"
+#endif
+
 enum clock_mode { CLOCK_FAST, CLOCK_BENCHMARK };
 
 void hal_setup(const enum clock_mode clock);

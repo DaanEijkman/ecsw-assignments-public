@@ -394,7 +394,7 @@ int main(void) {
     /* Welcome message */
     hal_send_str("\n");
     hal_send_str("====================================\n");
-    hal_send_str("Sum Assignment - Nucleo-L4R5ZI\n");
+    hal_send_str("Sum Assignment - " HAL_BOARD_NAME "\n");
     hal_send_str("====================================\n");
     hal_send_str("Ready for commands.\n\n");
 
