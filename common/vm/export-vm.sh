@@ -16,7 +16,7 @@ TIMESTAMP=$(date +%Y%m%d)
 OUTPUT_FILE="CryptoEngineering-VM-v${TIMESTAMP}.ova"
 
 # VM specifications from Vagrantfile
-VM_MEMORY="4096"
+VM_MEMORY="2048"
 VM_CPUS="2"
 VM_BASE_BOX="ubuntu/jammy64"
 
