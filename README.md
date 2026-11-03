@@ -8,7 +8,7 @@ tests.
 
 ## Getting Started
 ### Method 1 (Recommended)
-Use our provided VM. You can obtain it from: https://nce.mpi-sp.org/index.php/s/y4ddz4cwYgxjKD7
+Use our provided VM. You can obtain it from: https://sos.cs.ru.nl/teaching/ecsw2026/
 Instructions on the setup can be found next to the VM image files.
 
 ### Method 2
