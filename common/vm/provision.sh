@@ -91,12 +91,12 @@ fi
 echo "[5/6] Cloning course repository..."
 if [ ! -d "/home/vagrant/cryptoeng" ]; then
     echo "Cloning repository from GitHub..."
-    su - vagrant -c "git clone -b no-solution-squashed https://github.com/dop-amin/2026-cryptoeng-assignments-pub.git /home/vagrant/cryptoeng"
+    su - vagrant -c "git clone -b no-solution-squashed https://github.com/cryptojedi/ecsw-assignments-public /home/vagrant/cryptoeng"
 
     if [ $? -eq 0 ]; then
         echo "Repository cloned successfully"
     else
-        echo "ERROR: Failed to clone repository from https://github.com/dop-amin/2026-cryptoeng-assignments-pub.git"
+        echo "ERROR: Failed to clone repository from https://github.com/cryptojedi/ecsw-assignments-public"
         echo "Please ensure the VM has internet connectivity"
         exit 1
     fi
