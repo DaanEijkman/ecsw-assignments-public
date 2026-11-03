@@ -24,6 +24,7 @@ Usage:
 """
 
 import logging
+import os
 import socket
 import subprocess
 import time
@@ -80,11 +81,11 @@ class BoardPlatform(PlatformInterface):
         Initialize board platform.
 
         Args:
-            port: Serial port path (auto-detect if None)
+            port: Serial port path (falls back to $SERIAL_PORT, then auto-detect)
             baudrate: Communication speed
             timeout: Read timeout in seconds
         """
-        self.port = port
+        self.port = port or os.environ.get("SERIAL_PORT") or None
         self.baudrate = baudrate
         self.timeout = timeout
         self.serial = None
@@ -338,6 +339,10 @@ def get_platform(platform_type: Optional[str] = None, **kwargs) -> PlatformInter
     if platform_type is None:
         # Auto-detect: check if board is available
         import serial.tools.list_ports
+
+        if os.environ.get("SERIAL_PORT"):
+            logger.info("Using board at $SERIAL_PORT")
+            return BoardPlatform(**kwargs)
 
         for port in serial.tools.list_ports.comports():
             if "STM" in port.description:

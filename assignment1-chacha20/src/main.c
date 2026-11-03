@@ -547,7 +547,7 @@ int main(void) {
     /* Welcome message */
     hal_send_str("\n");
     hal_send_str("====================================\n");
-    hal_send_str("ChaCha20 Assignment - Nucleo-L4R5ZI\n");
+    hal_send_str("ChaCha20 Assignment - " HAL_BOARD_NAME "\n");
     hal_send_str("====================================\n");
     hal_send_str("Ready for commands.\n\n");
 

@@ -9,8 +9,8 @@ board or inside QEMU.
 - Build the assignment firmware (`make` inside the assignment directory).  
 - Open a Nix development shell so Jasmin, the ARM toolchain, QEMU, and Python
   dependencies are available.  
-- For hardware runs, connect the Nucleo-L4R5ZI and identify the serial device
-  name.
+- For hardware runs, connect the Nucleo-L4R5ZI (or the STM32F4DISCOVERY, see
+  below) and identify the serial device name.
 
 ## Running the Tests
 
@@ -38,6 +38,31 @@ make test-board           # runs tests/test_chacha20.py --platform board
 
 If automatic port detection fails, supply the serial path explicitly (e.g.,
 `--port /dev/ttyACM0` on Linux or `/dev/cu.usbmodem*` on macOS).
+
+### STM32F4DISCOVERY (STM32F407)
+
+The STM32F4DISCOVERY has no USB serial port of its own, so the UART goes
+through an external 3.3V USB-UART adapter (TX and RX cross over, adapter VCC
+stays unconnected; the board is powered through its ST-LINK USB port):
+
+| Board | Adapter |
+| --- | --- |
+| PA2 (USART2 TX) | RX |
+| PA3 (USART2 RX) | TX |
+| GND | GND |
+
+Select the board with `PLATFORM=stm32f4discovery` and point the tests at the
+adapter with `SERIAL_PORT` (it cannot be auto-detected):
+
+```bash
+cd assignment1-chacha20
+make PLATFORM=stm32f4discovery SERIAL_PORT=/dev/ttyUSB0 test-board
+```
+
+The benchmark clock is 24 MHz so that flash runs without wait states (like the
+20 MHz benchmark clock on the Nucleo). If more than one ST-LINK is connected, add
+`OPENOCD_SERIAL=<serial>` (shown by `st-info --probe`) to flash the right one.
+Switching `PLATFORM` rebuilds the firmware automatically.
 
 ## Useful Script Flags
 

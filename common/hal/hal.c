@@ -15,11 +15,27 @@
 #include <libopencm3/stm32/rng.h>
 #include <libopencm3/stm32/usart.h>
 
+#if defined(STM32L4)
 #define SERIAL_GPIO GPIOG
+#define SERIAL_GPIO_CLK RCC_GPIOG
 #define SERIAL_USART LPUART1
+#define SERIAL_USART_CLK RCC_LPUART1
 #define SERIAL_PINS (GPIO8 | GPIO7)
+#define SERIAL_AF GPIO_AF8
 #define NUCLEO_L4R5_BOARD
+#elif defined(STM32F4)
+/* USART2 on PA2 (TX) / PA3 (RX), connected to an external USB-UART adapter */
+#define SERIAL_GPIO GPIOA
+#define SERIAL_GPIO_CLK RCC_GPIOA
+#define SERIAL_USART USART2
+#define SERIAL_USART_CLK RCC_USART2
+#define SERIAL_PINS (GPIO2 | GPIO3)
+#define SERIAL_AF GPIO_AF7
+#else
+#error "Unsupported target: define STM32L4 or STM32F4"
+#endif
 
+#if defined(STM32L4)
 /* Patched function for newer PLL not yet supported by opencm3 */
 static void _rcc_set_main_pll(uint32_t source, uint32_t pllm, uint32_t plln, uint32_t pllp,
                               uint32_t pllq, uint32_t pllr) {
@@ -28,6 +44,7 @@ static void _rcc_set_main_pll(uint32_t source, uint32_t pllm, uint32_t plln, uin
                   (source << RCC_PLLCFGR_PLLSRC_SHIFT) | (pllq << RCC_PLLCFGR_PLLQ_SHIFT) |
                   (pllr << RCC_PLLCFGR_PLLR_SHIFT) | RCC_PLLCFGR_PLLREN;
 }
+#endif
 
 #define _RCC_CAT(A, B) A##_##B
 #define RCC_ID(NAME) _RCC_CAT(RCC, NAME)
@@ -39,6 +56,7 @@ extern uint32_t rcc_apb1_frequency;
 extern uint32_t rcc_apb2_frequency;
 #endif
 
+#if defined(STM32L4)
 static void clock_setup(enum clock_mode clock) {
     rcc_periph_clock_enable(RCC_PWR);
     rcc_periph_clock_enable(RCC_SYSCFG);
@@ -107,14 +125,54 @@ static void clock_setup(enum clock_mode clock) {
     rcc_set_clock48_source(RCC_CCIPR_CLK48SEL_HSI48);
     rng_enable();
 }
+#elif defined(STM32F4)
+/* Benchmark clock: PLL from HSI16 to 24MHz, low enough for zero flash wait
+   states (up to 30MHz on the F407) so cycle counts are not skewed by flash. */
+static const struct rcc_clock_scale benchmark_clock = {
+    .pllm = 16,  /* VCOin = HSI16 / 16 = 1MHz */
+    .plln = 192, /* VCOout = 192MHz */
+    .pllp = 8,   /* SYSCLK = 24MHz */
+    .pllq = 4,   /* PLL48CLK = 48MHz (RNG) */
+    .pllr = 0,
+    .pll_source = RCC_CFGR_PLLSRC_HSI_CLK,
+    .flash_config = FLASH_ACR_DCEN | FLASH_ACR_ICEN | FLASH_ACR_LATENCY_0WS,
+    .hpre = RCC_CFGR_HPRE_NODIV,
+    .ppre1 = RCC_CFGR_PPRE_NODIV,
+    .ppre2 = RCC_CFGR_PPRE_NODIV,
+    .voltage_scale = PWR_SCALE1,
+    .ahb_frequency = 24000000,
+    .apb1_frequency = 24000000,
+    .apb2_frequency = 24000000,
+};
+
+static void clock_setup(enum clock_mode clock) {
+    /* Both modes run from HSI16 so no particular crystal is required */
+    switch (clock) {
+    case CLOCK_BENCHMARK:
+        rcc_clock_setup_pll(&benchmark_clock);
+        _clock_freq = 24000000;
+        break;
+    case CLOCK_FAST:
+    default:
+        rcc_clock_setup_pll(&rcc_hsi_configs[RCC_CLOCK_3V3_168MHZ]);
+        flash_prefetch_enable();
+        _clock_freq = 168000000;
+        break;
+    }
+    rcc_periph_clock_enable(RCC_RNG);
+    rng_enable();
+}
+#endif
 
 static void usart_setup(void) {
-    rcc_periph_clock_enable(RCC_GPIOG);
-    rcc_periph_clock_enable(RCC_LPUART1);
+    rcc_periph_clock_enable(SERIAL_GPIO_CLK);
+    rcc_periph_clock_enable(SERIAL_USART_CLK);
 
+#if defined(STM32L4)
     PWR_CR2 |= PWR_CR2_IOSV;
+#endif
     gpio_set_output_options(SERIAL_GPIO, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, SERIAL_PINS);
-    gpio_set_af(SERIAL_GPIO, GPIO_AF8, SERIAL_PINS);
+    gpio_set_af(SERIAL_GPIO, SERIAL_AF, SERIAL_PINS);
     gpio_mode_setup(SERIAL_GPIO, GPIO_MODE_AF, GPIO_PUPD_NONE, SERIAL_PINS);
     usart_set_baudrate(SERIAL_USART, SERIAL_BAUD);
     usart_set_databits(SERIAL_USART, 8);

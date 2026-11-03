@@ -20,7 +20,13 @@ JASMINC ?= jasminc
 
 # OpenOCD
 OPENOCD ?= openocd
-OPENOCD_CFG ?= board/st_nucleo_l4.cfg
+# Serial number of the debug probe to use (only needed if several are connected)
+OPENOCD_SERIAL ?=
+OPENOCD_FLAGS = $(if $(OPENOCD_SERIAL),-c "adapter serial $(OPENOCD_SERIAL)") -f $(OPENOCD_CFG)
+
+# Serial port of the board UART (empty: the test scripts auto-detect it)
+SERIAL_PORT ?=
+export SERIAL_PORT
 
 # QEMU
 QEMU ?= qemu-system-arm
@@ -28,6 +34,9 @@ QEMU_MACHINE ?= mps2-an386
 QEMU_FLAGS = -M $(QEMU_MACHINE) -nographic -semihosting
 
 # Platform selection (default: board)
+#   board            - Nucleo-L4R5ZI
+#   stm32f4discovery - STM32F407VG (STM32F4DISCOVERY), UART on PA2 (TX) / PA3 (RX)
+#   qemu             - QEMU mps2-an386 emulation
 PLATFORM ?= board
 
 # Target device configuration
@@ -37,14 +46,32 @@ ifeq ($(PLATFORM),qemu)
   FPU = fpv4-sp-d16
   LDSCRIPT ?= $(COMMON_DIR)/mps2.ld
   HAL_SRC = $(COMMON_DIR)/hal/hal-qemu.c
+  HAL_OBJ = $(HAL_SRC:.c=.o)
   STARTUP_SRC = $(COMMON_DIR)/mps2/startup_MPS2.S
-else
+else ifeq ($(PLATFORM),stm32f4discovery)
+  DEVICE = STM32F407VG
+  ARCH = cortex-m4
+  FPU = fpv4-sp-d16
+  LDSCRIPT ?= $(COMMON_DIR)/stm32f407vg.ld
+  HAL_SRC = $(COMMON_DIR)/hal/hal.c
+  HAL_OBJ = $(COMMON_DIR)/hal/hal-stm32f4.o
+  STARTUP_SRC =
+  OPENCM3_TARGET = stm32/f4
+  OPENCM3_FAMILY = STM32F4
+  OPENOCD_CFG ?= board/stm32f4discovery.cfg
+else ifeq ($(PLATFORM),board)
   DEVICE = STM32L4R5ZI
   ARCH = cortex-m4
   FPU = fpv4-sp-d16
   LDSCRIPT ?= $(COMMON_DIR)/stm32l4r5zi.ld
   HAL_SRC = $(COMMON_DIR)/hal/hal.c
+  HAL_OBJ = $(COMMON_DIR)/hal/hal-stm32l4.o
   STARTUP_SRC =
+  OPENCM3_TARGET = stm32/l4
+  OPENCM3_FAMILY = STM32L4
+  OPENOCD_CFG ?= board/st_nucleo_l4.cfg
+else
+  $(error Unknown PLATFORM '$(PLATFORM)', use board, stm32f4discovery or qemu)
 endif
 
 # Paths
@@ -53,9 +80,10 @@ LIBOPENCM3_DIR = $(COMMON_DIR)/libopencm3
 HAL_DIR = $(COMMON_DIR)/hal
 MPS2_DIR = $(COMMON_DIR)/mps2
 
-# libopencm3 configuration (only for board platform)
+# libopencm3 configuration (only for board platforms)
 OPENCM3_DIR = $(LIBOPENCM3_DIR)
-LIBOPENCM3 = $(LIBOPENCM3_DIR)/lib/libopencm3_stm32l4.a
+OPENCM3_LIB = opencm3_$(subst /,,$(OPENCM3_TARGET))
+LIBOPENCM3 = $(LIBOPENCM3_DIR)/lib/lib$(OPENCM3_LIB).a
 
 # Compiler flags
 ARCH_FLAGS = -mthumb -mcpu=$(ARCH) -mfloat-abi=hard -mfpu=$(FPU)
@@ -75,7 +103,7 @@ ifeq ($(PLATFORM),qemu)
   CFLAGS += -DDATA_IN_FLASH
   ASFLAGS += -DDATA_IN_FLASH
 else
-  CFLAGS += -DSTM32L4
+  CFLAGS += -D$(OPENCM3_FAMILY)
   CFLAGS += -I$(LIBOPENCM3_DIR)/include
 endif
 
@@ -93,7 +121,7 @@ ifeq ($(PLATFORM),qemu)
   LDLIBS += -lc -lnosys -lm
 else
   LDFLAGS += -L$(LIBOPENCM3_DIR)/lib
-  LDLIBS += -lopencm3_stm32l4
+  LDLIBS += -l$(OPENCM3_LIB)
   LDLIBS += -lc -lnosys -lm
 endif
 
@@ -104,11 +132,22 @@ JASMINFLAGS += -system linux
 
 # Object files (platform-specific)
 ifeq ($(PLATFORM),qemu)
-  OBJS += $(HAL_SRC:.c=.o)
+  OBJS += $(HAL_OBJ)
   OBJS += $(STARTUP_SRC:.S=.o)
 else
-  OBJS += $(HAL_SRC:.c=.o)
+  OBJS += $(HAL_OBJ)
 endif
+
+# Objects are built next to their sources, so rebuild them all when PLATFORM
+# changes (otherwise e.g. a QEMU build would be linked/flashed for the board)
+PLATFORM_STAMP = $(BUILD_DIR)/.platform-$(PLATFORM)
+
+$(PLATFORM_STAMP):
+	@mkdir -p $(BUILD_DIR)
+	@rm -f $(BUILD_DIR)/.platform-*
+	@touch $@
+
+$(OBJS): $(PLATFORM_STAMP)
 
 # Build rules
 .PHONY: all clean flash monitor debug size libopencm3 qemu-gdb
@@ -140,6 +179,13 @@ $(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
 	@echo "  CC      $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
+# The libopencm3 HAL is shared by all targets, so name its object per family
+ifneq ($(PLATFORM),qemu)
+$(HAL_OBJ): $(HAL_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+endif
+
 %.o: %.s
 	@echo "  AS      $<"
 	@$(AS) $(ARCH_FLAGS) $< -o $@
@@ -161,14 +207,14 @@ $(LIBOPENCM3):
 		echo "Please run: git submodule update --init --recursive"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(LIBOPENCM3_DIR) TARGETS=stm32/l4
+	$(MAKE) -C $(LIBOPENCM3_DIR) TARGETS=$(OPENCM3_TARGET)
 
 libopencm3: $(LIBOPENCM3)
 
 # Flashing
 flash: $(BUILD_DIR)/$(TARGET).bin
 	@echo "Flashing $(BUILD_DIR)/$(TARGET).bin..."
-	$(OPENOCD) -f $(OPENOCD_CFG) \
+	$(OPENOCD) $(OPENOCD_FLAGS) \
 		-c "init" \
 		-c "reset init" \
 		-c "flash write_image erase $(BUILD_DIR)/$(TARGET).bin 0x08000000" \
@@ -178,12 +224,12 @@ flash: $(BUILD_DIR)/$(TARGET).bin
 # Serial monitor
 monitor:
 	@echo "Opening serial monitor (press Ctrl+C to exit)..."
-	@python3 -m serial.tools.miniterm /dev/ttyACM0 115200 --eol LF
+	@python3 -m serial.tools.miniterm $(or $(SERIAL_PORT),/dev/ttyACM0) 38400 --eol LF
 
 # Debugging
 debug: $(BUILD_DIR)/$(TARGET).elf
 	@echo "Starting OpenOCD server..."
-	@$(OPENOCD) -f $(OPENOCD_CFG) &
+	@$(OPENOCD) $(OPENOCD_FLAGS) &
 	@sleep 2
 	@echo "Starting GDB..."
 	@$(GDB) -ex "target extended-remote localhost:3333" \
@@ -222,7 +268,7 @@ clean:
 	@rm -rf $(BUILD_DIR)
 	@rm -f $(OBJS)
 	@rm -f $(OBJS:.o=.d)
-	@rm -f $(HAL_SRC:.c=.o) $(HAL_SRC:.c=.d)
+	@rm -f $(HAL_OBJ) $(HAL_OBJ:.o=.d)
 	@rm -f $(STARTUP_SRC:.S=.o)
 	@rm -f $(COMMON_DIR)/mps2.ld
 	@find $(SRC_DIR) -name "*.s" -type f -delete
@@ -261,9 +307,15 @@ help:
 	@echo "  help         - Show this help"
 	@echo ""
 	@echo "Platform selection:"
-	@echo "  PLATFORM=board   - Build for physical STM32 board (default)"
-	@echo "  PLATFORM=qemu    - Build for QEMU mps2-an386 emulation"
+	@echo "  PLATFORM=board            - Build for Nucleo-L4R5ZI board (default)"
+	@echo "  PLATFORM=stm32f4discovery - Build for STM32F407 (STM32F4DISCOVERY) board"
+	@echo "  PLATFORM=qemu             - Build for QEMU mps2-an386 emulation"
+	@echo ""
+	@echo "Board options:"
+	@echo "  SERIAL_PORT=<dev>         - UART device for tests/monitor (default: auto-detect)"
+	@echo "  OPENOCD_SERIAL=<serial>   - Select the ST-LINK when several are connected"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make PLATFORM=qemu           # Build for QEMU"
 	@echo "  make PLATFORM=qemu qemu-gdb  # Build and debug in QEMU"
+	@echo "  make PLATFORM=stm32f4discovery SERIAL_PORT=/dev/ttyUSB0 test-board"

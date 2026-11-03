@@ -24,7 +24,7 @@ int main(void) {
     hal_send_str("====================================\n\n");
 
     /* Send the fixed message */
-    hal_send_str("Hello from the Nucleo board!\n");
+    hal_send_str("Hello from the " HAL_BOARD_NAME " board!\n");
     hal_send_str("This is a simple demo of UART communication.\n");
 
     /* Loop forever (prevents return from main which causes issues) */

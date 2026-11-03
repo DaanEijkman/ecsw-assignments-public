@@ -60,7 +60,7 @@ Reading output from board...
 Playground 0: Print Demo
 ====================================
 
-Hello from the Nucleo board!
+Hello from the Nucleo-L4R5ZI board!
 This is a simple demo of UART communication.
 
 ============================================================
