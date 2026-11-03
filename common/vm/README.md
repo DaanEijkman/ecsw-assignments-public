@@ -64,7 +64,7 @@ vagrant up
 ```
 
 This will:
-- Download Ubuntu 22.04 base box (~600 MB)
+- Download Ubuntu 24.04 base box (~600 MB)
 - Copy the repository into the VM (from shared folder to native filesystem)
 - Create and configure the VM
 - Install all required tools (takes 15-30 minutes)

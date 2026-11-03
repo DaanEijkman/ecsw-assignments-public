@@ -169,7 +169,7 @@ VBoxManage export "${VM_NAME}" \
     --product "Cryptographic Engineering VM" \
     --vendor "Cryptographic Engineering Course" \
     --version "1.0-${TIMESTAMP}" \
-    --description "Pre-configured Ubuntu 22.04 VM for Cryptographic Engineering course. Includes Nix package manager, Jasmin compiler, ARM GCC toolchain, OpenOCD, QEMU, Python tools, and libopencm3. Ready for ChaCha20 and Ed25519 assignments on STM32 Nucleo-L4R5ZI. Login: vagrant/vagrant. First time: cd ~/cryptoeng && nix develop"
+    --description "Pre-configured Ubuntu 24.04 VM for Cryptographic Engineering course. Includes Nix package manager, Jasmin compiler, ARM GCC toolchain, OpenOCD, QEMU, Python tools, and libopencm3. Ready for ChaCha20 and Ed25519 assignments on STM32 Nucleo-L4R5ZI. Login: vagrant/vagrant. First time: cd ~/cryptoeng && nix develop"
 
 EXPORT_STATUS=$?
 if [ $EXPORT_STATUS -ne 0 ]; then
