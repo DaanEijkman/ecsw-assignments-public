@@ -1,6 +1,14 @@
 // integer_ptr: pointer to array of num_int integers
 export fn sum_jasmin(reg u32 integer_ptr, reg u32 num_int) -> reg u32 {
-    reg u32 sum = 0;
+    reg u32 sum;
+    reg u32 counter;
+    reg u32 x;
+    counter = 0;
+    while (counter < num_int){
+        x = [:u32 integer_ptr + counter];
+        sum = sum + x;
+        x += 1;
+    }
     return sum;
 }
 
