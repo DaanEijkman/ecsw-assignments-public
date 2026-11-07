@@ -14,13 +14,23 @@ export fn sum_jasmin(reg u32 integer_ptr, reg u32 num_int) -> reg u32 {
 
 export fn sum_jasmin_fast(reg u32 integer_ptr, reg u32 num_int) -> reg u32 {
     reg u32 sum = 0;
-    reg u32 counter = 0;
+    reg u32 end = num_int << 2; // num_int * 4
+    end += integer_ptr; // end = integer_ptr + num_int * 4
+    reg u32 end8 = end;
+    end8 -= 28;
     reg u32 x;
-    while (counter < num_int){
+    inline int k;
+    while (integer_ptr < end){
+        for k = 0 to 8{
+            x = [:u32 integer_ptr + k * 4];
+            sum = sum + x;
+        }
+        integer_ptr += 32;
+    }
+    while (integer_ptr < end8){
         x = [:u32 integer_ptr];
         sum = sum + x;
         integer_ptr += 4;
-        counter += 1;
     }
     return sum;
 }
