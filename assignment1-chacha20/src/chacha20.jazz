@@ -7,6 +7,10 @@
 //           c += d; b ^= c; b <<<= 7
 fn quarterround(reg u32 a, reg u32 b, reg u32 c, reg u32 d)
     -> reg u32, reg u32, reg u32, reg u32 {
+    a += b; d ^= a; d <<r= 16;
+    c += d; b ^= c; b <<r= 12;
+    a += b; d ^= a; d <<r= 8;
+    c += d; b ^= c; b <<r= 7;
     return a, b, c, d;
 }
 
@@ -16,6 +20,22 @@ fn quarterround(reg u32 a, reg u32 b, reg u32 c, reg u32 d)
 // Column 2: (2, 6, 10, 14)
 // Column 3: (3, 7, 11, 15)
 fn column_round(reg ptr u32[16] pstate) -> reg ptr u32[16] {
+    reg u32 a;
+    reg u32 b;
+    reg u32 c;
+    reg u32 d;
+    inline int i;
+    for i = 0 to 4 {
+        a = pstate[i];
+        b = pstate[i+4];
+        c = pstate[i+8];
+        d = pstate[i+12];
+        a, b, c, d = quarterround(a, b, c, d);
+        pstate[i] = a;
+        pstate[i+4] = b;
+        pstate[i+8] = c;
+        pstate[i+12] = d;
+    }
     return pstate;
 }
 
@@ -25,15 +45,88 @@ fn column_round(reg ptr u32[16] pstate) -> reg ptr u32[16] {
 // Diagonal 2: (2, 7, 8, 13)
 // Diagonal 3: (3, 4, 9, 14)
 fn diagonal_round(reg ptr u32[16] pstate) -> reg ptr u32[16] {
+    reg u32 a;
+    reg u32 b;
+    reg u32 c;
+    reg u32 d;
+
+    a = pstate[0];
+    b = pstate[5];
+    c = pstate[10];
+    d = pstate[15];
+    a, b, c, d = quarterround(a, b, c, d);
+    pstate[0]   = a;
+    pstate[5] = b;
+    pstate[10] = c;
+    pstate[15] = d;
+
+    a = pstate[1];
+    b = pstate[6];
+    c = pstate[11];
+    d = pstate[12];
+    a, b, c, d = quarterround(a, b, c, d);
+    pstate[1]   = a;
+    pstate[6] = b;
+    pstate[11] = c;
+    pstate[12] = d;
+
+    a = pstate[2];
+    b = pstate[7];
+    c = pstate[8];
+    d = pstate[13];
+    a, b, c, d = quarterround(a, b, c, d);
+    pstate[2]   = a;
+    pstate[7] = b;
+    pstate[8] = c;
+    pstate[13] = d;
+
+    a = pstate[3];
+    b = pstate[4];
+    c = pstate[9];
+    d = pstate[14];
+    a, b, c, d = quarterround(a, b, c, d);
+    pstate[3]   = a;
+    pstate[4] = b;
+    pstate[9] = c;
+    pstate[14] = d;
     return pstate;
 }
 
 // void chacha20_block(const uint32_t input[16], uint32_t output[16])
 fn chacha20_block(reg ptr u8[64] output_ptr, reg ptr u32[16] input_ptr) -> reg ptr u8[64]{
+    reg u32 t;
+    reg u32 u;
+    stack u32[16] working_state;
+    inline int i;
+    working_state = #copy(input_ptr);
+    for i = 0 to 10 {
+        working_state = column_round(working_state);
+        working_state = diagonal_round(working_state);
+    }
+    for i = 0 to 16 {
+        t = working_state[i];
+        u = input_ptr[i];
+        t += u;
+        output_ptr[u32 i] = t;
+    }
     return output_ptr;
 }
 
 fn chacha20_keysetup(reg ptr u32[16] state_ptr, reg ptr u8[32] sk_ptr) -> reg ptr u32[16]{
+    reg u32 r;
+    reg u32 const0 = 0x61707865;
+    reg u32 const1 = 0x3320646e;
+    reg u32 const2 = 0x79622d32;
+    reg u32 const3 = 0x6b206574;
+    state_ptr[0] = const0;
+    state_ptr[1] = const1;
+    state_ptr[2] = const2;
+    state_ptr[3] = const3;
+    inline int i;
+    for i = 0 to 8 {
+        r = sk_ptr[u32 i];
+        state_ptr[i+4] = r;
+    }
     return state_ptr;
 }
 fn chacha20_ietf_ivsetup(reg ptr u32[16] state_ptr, reg ptr u8[12] nonce_ptr) -> reg ptr u32[16]{
