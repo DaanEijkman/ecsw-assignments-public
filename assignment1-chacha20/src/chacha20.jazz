@@ -130,6 +130,12 @@ fn chacha20_keysetup(reg ptr u32[16] state_ptr, reg ptr u8[32] sk_ptr) -> reg pt
     return state_ptr;
 }
 fn chacha20_ietf_ivsetup(reg ptr u32[16] state_ptr, reg ptr u8[12] nonce_ptr) -> reg ptr u32[16]{
+    reg u32 r;
+    inline int i;
+    for i = 0 to 3 {
+        r = nonce_ptr[u32 i];
+        state_ptr[13+i] = r;
+    }
     return state_ptr;
 }
 
